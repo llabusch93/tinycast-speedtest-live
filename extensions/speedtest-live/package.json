@@ -1,0 +1,32 @@
+{
+  "$schema": "https://www.raycast.com/schemas/extension.json",
+  "name": "speedtest-live",
+  "title": "Speedtest Live",
+  "description": "Misst Ping, Download und Upload über speedtest.net und zeigt jeden Messwert live mit Tacho und Verlaufskurven.",
+  "icon": "icon.png",
+  "author": "llabusch93",
+  "license": "MIT",
+  "platforms": ["macOS"],
+  "categories": ["Applications", "Developer Tools"],
+  "commands": [
+    {
+      "name": "speedtest",
+      "title": "Speedtest",
+      "description": "Internetgeschwindigkeit live messen",
+      "mode": "view"
+    }
+  ],
+  "dependencies": {
+    "@raycast/api": "^1.104.25"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.4",
+    "@types/react": "^19.0.14",
+    "typescript": "^5.9.3"
+  },
+  "scripts": {
+    "build": "ray build -e dist -o dist",
+    "dev": "ray develop",
+    "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON test/check.mts"
+  }
+}
