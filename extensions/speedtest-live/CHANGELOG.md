@@ -1,8 +1,8 @@
-# Speedtest Live – Changelog
+# Speedtest Live Changelog
 
-## [Erste Version] - 2026-09-28
+## [Initial Version] - 2026-09-28
 
-- Live-Dashboard mit Tacho und Kacheln für Ping, Download und Upload
-- Verlaufskurven, die mit dem Fortschritt wachsen
-- Flüssige Anzeige ohne Flackern in Tinycast 0.11
-- Lädt die Ookla-CLI bei Bedarf selbst, geprüft gegen eine feste Prüfsumme
+- Live dashboard with a gauge and tiles for ping, download and upload
+- History curves that grow with the test progress
+- Smooth, flicker-free display in Tinycast 0.11
+- Downloads the Ookla CLI on demand, verified against a pinned checksum

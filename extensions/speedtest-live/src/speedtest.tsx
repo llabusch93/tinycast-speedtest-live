@@ -1,8 +1,7 @@
-// Tinycast liefert die Ausgabe von spawn() erst nach Prozessende. Deshalb schreibt die
-// Ookla-CLI ihre JSON-Zeilen in eine Datei; die Ansicht liest sie alle 100 ms und lässt die
-// Anzeige zu den neuen Messwerten gleiten.
-// Gezeichnet wird in einer Grid-Kachel: Deren Bild behält in Tinycast 0.11 sein letztes Frame,
-// bis das nächste dekodiert ist. Ein Markdown-Bild würde bei jedem Wechsel kurz leer blinken.
+// Tinycast only hands over spawn() output once the process has exited. So the Ookla CLI writes
+// its JSON lines to a file; the view reads it every 100 ms and glides to the new samples.
+// The dashboard lives in a grid tile: in Tinycast 0.11 its image keeps the last frame until the
+// next one is decoded, while a markdown image would briefly go blank on every change.
 import { Action, ActionPanel, Grid, Icon, environment, updateCommandMetadata } from "@raycast/api";
 import { Buffer } from "buffer";
 import { execFile, spawn } from "child_process";
@@ -17,11 +16,11 @@ const CLI_PATHS = ["/opt/homebrew/bin/speedtest", "/usr/local/bin/speedtest"];
 const OOKLA_URL = "https://install.speedtest.net/app/cli/ookla-speedtest-1.2.0-macosx-universal.tgz";
 const OOKLA_SHA256 = "c9f8192149ebc88f8699998cecab1ce144144045907ece6f53cf50877f4de66f";
 const POLL_MS = 100;
-// Tinycast nimmt jedes Seitenverhältnis; Raycasts Typ kennt nur eine feste Auswahl.
+// Tinycast accepts any aspect ratio; Raycast's type only knows a fixed set.
 const ASPECT_RATIO = "5/2" as Grid.AspectRatio;
 
-// Eine installierte CLI hat Vorrang; sonst lädt die Erweiterung die Ookla-CLI einmalig in
-// ihren Support-Ordner, geprüft gegen die Prüfsumme.
+// An installed CLI wins; otherwise the extension downloads the Ookla CLI once into its support
+// folder and verifies it against the pinned checksum.
 async function ookla() {
   const installed = CLI_PATHS.find((p) => fs.existsSync(p));
   if (installed) return installed;
@@ -29,9 +28,9 @@ async function ookla() {
   const bin = path.join(dir, "speedtest");
   if (fs.existsSync(bin)) return bin;
   const response = await fetch(OOKLA_URL);
-  if (!response.ok) throw new Error(`Download fehlgeschlagen (HTTP ${response.status})`);
+  if (!response.ok) throw new Error(`download failed (HTTP ${response.status})`);
   const data = Buffer.from(await response.arrayBuffer());
-  if (createHash("sha256").update(data).digest("hex") !== OOKLA_SHA256) throw new Error("Prüfsumme stimmt nicht");
+  if (createHash("sha256").update(data).digest("hex") !== OOKLA_SHA256) throw new Error("checksum mismatch");
   fs.mkdirSync(dir, { recursive: true });
   const archive = path.join(dir, "ookla.tgz");
   fs.writeFileSync(archive, data);
@@ -41,13 +40,13 @@ async function ookla() {
   return bin;
 }
 
-// Startet eine Messung und meldet jeden neu gelesenen Stand; gibt das Aufräumen zurück.
+// Starts a measurement and reports every newly read state; returns the cleanup.
 function measure(cli: string, onState: (state: State) => void) {
-  // Schließt Tinycast die Palette mitten im Lauf, entfällt das Aufräumen unten; Reste gehen hier.
+  // If Tinycast closes the palette mid-run, the cleanup below never runs; leftovers go here.
   for (const name of fs.readdirSync(environment.supportPath)) {
     if (name.startsWith("run-")) fs.rmSync(path.join(environment.supportPath, name), { force: true });
   }
-  // Eigene Datei je Lauf: Ein abgebrochener Vorgänger schreibt sonst in die neue hinein.
+  // One file per run: an aborted predecessor would otherwise write into the new one.
   const file = path.join(environment.supportPath, `run-${Date.now()}.jsonl`);
   fs.writeFileSync(file, "");
   let seen = -1;
@@ -56,7 +55,7 @@ function measure(cli: string, onState: (state: State) => void) {
     try {
       text = fs.readFileSync(file, "utf8");
     } catch {
-      // Datei schon aufgeräumt.
+      // File already cleaned up.
     }
     if (text.length === seen && exitCode === undefined) return;
     seen = text.length;
@@ -97,7 +96,7 @@ export default function Command() {
       .then((cli) => {
         if (alive) stop = measure(cli, (next) => alive && setState(next));
       })
-      .catch((error: Error) => alive && setState({ ...parse(""), error: `Ookla-CLI: ${error.message}` }));
+      .catch((error: Error) => alive && setState({ ...parse(""), error: `Ookla CLI: ${error.message}` }));
     return () => {
       alive = false;
       stop();
@@ -112,7 +111,7 @@ export default function Command() {
   useEffect(() => {
     if (state.result) {
       const { download, upload } = state.result;
-      updateCommandMetadata({ subtitle: `↓ ${speed(mbps(download.bandwidth))}  ↑ ${speed(mbps(upload.bandwidth))} Mbit/s` });
+      updateCommandMetadata({ subtitle: `↓ ${speed(mbps(download.bandwidth))}  ↑ ${speed(mbps(upload.bandwidth))} Mbps` });
     }
   }, [state.result]);
 
@@ -120,11 +119,11 @@ export default function Command() {
   const current = state.phase === "ping" ? state.ping : state.phase === "download" ? state.download : state.upload;
   const progress = current?.progress ?? 0;
   const title = state.error
-    ? "Speedtest · Fehler"
+    ? "Speedtest · Error"
     : state.result
-      ? "Speedtest · Fertig"
+      ? "Speedtest · Done"
       : state.phase === "connecting"
-        ? "Speedtest · Verbinde …"
+        ? "Speedtest · Connecting …"
         : `Speedtest · ${PHASES[state.phase === "done" ? "download" : state.phase].label} ${Math.round(progress * 100)} %`;
   const url = state.result?.result?.url;
 
@@ -144,15 +143,15 @@ export default function Command() {
         actions={
           <ActionPanel>
             <Action
-              title={running ? "Neu starten" : "Erneut testen"}
+              title={running ? "Restart" : "Run Again"}
               icon={Icon.ArrowClockwise}
               shortcut={{ modifiers: ["cmd"], key: "r" }}
               onAction={() => setRun((n) => n + 1)}
             />
-            {url && <Action.OpenInBrowser title="Ergebnis auf speedtest.net öffnen" url={url} />}
+            {url && <Action.OpenInBrowser title="Open Result on speedtest.net" url={url} />}
             {state.result && (
               <Action.CopyToClipboard
-                title="Ergebnis kopieren"
+                title="Copy Result"
                 content={summary(state.result)}
                 shortcut={{ modifiers: ["cmd", "shift"], key: "c" }}
               />

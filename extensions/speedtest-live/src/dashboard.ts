@@ -1,9 +1,9 @@
-// Messdaten der Ookla-CLI lesen und das Dashboard als SVG zeichnen. Ohne Abhängigkeiten,
-// damit `npm test` die Datei direkt mit Node ausführen kann.
+// Reads the Ookla CLI output and draws the dashboard as SVG. No dependencies, so `npm test`
+// can run this file directly with Node.
 
 export const FRAME_MS = 66;
-// Anteil der Restdistanz je Frame, aus einer festen Zeitkonstante: Die Anzeige gleitet
-// unabhängig von FRAME_MS in rund 150 ms zum neuen Messwert.
+// Share of the remaining distance per frame, derived from a fixed time constant: the display
+// glides to each new sample in about 150 ms regardless of FRAME_MS.
 const EASE = 1 - Math.exp(-FRAME_MS / 130);
 const TICKS = [0, 5, 10, 25, 50, 100, 250, 500, 1000];
 
@@ -14,10 +14,10 @@ export const PHASES = {
 };
 type Key = keyof typeof PHASES;
 
-// Tinycast ersetzt diese Namen im SVG durch die Textfarben des aktuellen Themes.
+// Tinycast replaces these names in the SVG with the text colours of the current theme.
 const TEXT = "raycast-primary-text";
 const MUTED = "raycast-secondary-text";
-// CoreSVG zeichnet Text immer in Helvetica Regular; Fettung gibt es nur über eine Kontur.
+// CoreSVG always draws text in Helvetica Regular; a stroke is the only way to get bold.
 const FONT = "Helvetica Neue, Helvetica, sans-serif";
 const bold = (size: number) => `stroke="${TEXT}" stroke-width="${(size / 27).toFixed(2)}" stroke-linejoin="round"`;
 
@@ -64,12 +64,12 @@ export interface Shown {
 
 export const mbps = (bytesPerSecond: number) => (bytesPerSecond * 8) / 1e6;
 const num = (value: number, digits: number) =>
-  value.toLocaleString("de-DE", { minimumFractionDigits: digits, maximumFractionDigits: digits });
+  value.toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits });
 export const speed = (value: number) => num(value, value >= 100 ? 0 : 1);
 export const ms = (value: number) => num(value, value >= 10 ? 0 : 1);
 
-// Baut den Zustand bei jedem Lesen komplett aus der Datei neu auf; eine halb geschriebene
-// letzte Zeile wird übersprungen und beim nächsten Lesen vollständig gelesen.
+// Rebuilds the whole state from the file on every read; a half-written last line is skipped
+// and read in full next time.
 export function parse(text: string, exitCode?: number): State {
   const s: State = {
     phase: "connecting",
@@ -104,22 +104,21 @@ export function parse(text: string, exitCode?: number): State {
       Object.assign(s, { phase: "done", result: e, ping: e.ping, download: e.download, upload: e.upload });
     else if (e.type === "log" && e.level === "error") s.error = e.message;
   }
-  if (exitCode != null && !s.result) s.error = s.error || lastText || `speedtest endete mit Code ${exitCode}`;
+  if (exitCode != null && !s.result) s.error = s.error || lastText || `speedtest exited with code ${exitCode}`;
   return s;
 }
 
 const transfer = (s: State, phase: Phase) => (phase === "download" ? s.download : phase === "upload" ? s.upload : null);
 
-// Wohin die Anzeige gleitet: aktuelle Bandbreite und Fortschritt der laufenden Phase.
+// Where the display glides to: current bandwidth and progress of the running phase.
 export function target(s: State): Shown {
   if (s.result) return { phase: "done", v: mbps(s.result.download.bandwidth), p: 1 };
   const data = transfer(s, s.phase);
   return data ? { phase: s.phase, v: mbps(data.bandwidth), p: data.progress ?? 0 } : { phase: s.phase, v: 0, p: 0 };
 }
 
-// Ein Frame: gleitet ein Stück weiter; beim Phasenwechsel springt nur der Fortschritt,
-// damit die neue Kurve links beginnt. Gibt `shown` unverändert zurück, wenn nichts mehr
-// läuft, dann rendert React nicht neu.
+// One frame: glides a bit further; on a phase change only the progress jumps, so the new
+// curve starts on the left. Returns `shown` unchanged once settled, so React skips the render.
 export function step(shown: Shown | null, t: Shown): Shown {
   if (!shown) return t;
   const samePhase = shown.phase === t.phase;
@@ -141,7 +140,7 @@ const xy = ([x, y]: [number, number]) => `${x.toFixed(1)} ${y.toFixed(1)}`;
 const arc = (cx: number, cy: number, r: number, from: number, to: number) =>
   `M${xy(polar(cx, cy, r, from))}A${r} ${r} 0 ${to - from > 180 ? 1 : 0} 1 ${xy(polar(cx, cy, r, to))}`;
 
-// Jeder Skalenwert bekommt denselben Abstand, wie bei speedtest.net.
+// Every tick gets the same spacing, like on speedtest.net.
 function scale(value: number) {
   for (let i = 1; i < TICKS.length; i++) {
     if (value <= TICKS[i]) return (i - 1 + (value - TICKS[i - 1]) / (TICKS[i] - TICKS[i - 1])) / (TICKS.length - 1);
@@ -157,14 +156,14 @@ function gauge(s: State, shown: Shown) {
   const { cx, cy, r } = G;
   const key = s.phase === "done" ? "download" : s.phase;
   const data = transfer(s, key);
-  let label = "Verbinde";
+  let label = "Connecting";
   let value = "…";
   let unit = "";
   let fraction = 0;
-  if (s.error) [label, value] = ["Fehler", "!"];
+  if (s.error) [label, value] = ["Error", "!"];
   else if (key === "ping" && s.ping) [label, value, unit] = ["Ping", ms(s.ping.latency), "ms"];
   else if (data && key !== "connecting" && key !== "ping")
-    [label, value, unit, fraction] = [PHASES[key].label, speed(shown.v), "Mbit/s", scale(shown.v)];
+    [label, value, unit, fraction] = [PHASES[key].label, speed(shown.v), "Mbps", scale(shown.v)];
   const end = START + SWEEP * fraction;
   const valueArc = arc(cx, cy, r, START, end);
   const ticks = TICKS.map((tick, i) => {
@@ -172,7 +171,7 @@ function gauge(s: State, shown: Shown) {
     return `<text x="${x.toFixed(1)}" y="${(y + 5).toFixed(1)}" text-anchor="middle" font-size="13" fill="${MUTED}">${tick}</text>`;
   });
   const [kx, ky] = polar(cx, cy, r, end);
-  // Schein aus zwei breiten, blassen Strichen: Ein Weichzeichner kostet CoreSVG das Vierfache je Frame.
+  // Glow from two wide, faint strokes: a blur filter costs CoreSVG four times as much per frame.
   const stroke = (width: number, extra = "") =>
     `<path d="${valueArc}" fill="none" stroke="url(#g-${key})" stroke-width="${width}" stroke-linecap="round"${extra}/>`;
   return `
@@ -184,7 +183,7 @@ function gauge(s: State, shown: Shown) {
   <text x="${cx}" y="${cy + 56}" text-anchor="middle" font-size="16" fill="${MUTED}">${unit}</text>`;
 }
 
-// Die Kurve wächst mit dem Fortschritt nach rechts und ist damit zugleich der Fortschrittsbalken.
+// The curve grows to the right with the progress and doubles as the progress bar.
 function chart(samples: Sample[], x: number, y: number, w: number, hgt: number, key: Key) {
   const max = Math.max(...samples.map(([, v]) => v)) * 1.15 || 1;
   const points = samples.map(([p, v]) => `${(x + w * p).toFixed(1)},${(y + hgt - (hgt * v) / max).toFixed(1)}`);
@@ -198,16 +197,16 @@ function tile(s: State, shown: Shown, key: Key, x: number, y: number, w: number,
   const live = active && key !== "ping";
   const data = key === "ping" ? s.ping : transfer(s, key);
   let value = "—";
-  let sub = key === "ping" ? "ms" : "Mbit/s";
+  let sub = key === "ping" ? "ms" : "Mbps";
   if (s.ping && key === "ping") {
     value = ms(s.ping.latency);
-    sub += ` · Jitter ${ms(s.ping.jitter)} ms`;
-    if (s.result?.packetLoss != null) sub += ` · Verlust ${num(s.result.packetLoss, 0)} %`;
+    sub += ` · jitter ${ms(s.ping.jitter)} ms`;
+    if (s.result?.packetLoss != null) sub += ` · loss ${num(s.result.packetLoss, 0)} %`;
   } else if (data && "bandwidth" in data) {
     value = speed(live ? shown.v : mbps(data.bandwidth));
-    if (data.latency?.iqm != null) sub += ` · Latenz ${ms(data.latency.iqm)} ms`;
+    if (data.latency?.iqm != null) sub += ` · latency ${ms(data.latency.iqm)} ms`;
   }
-  // Bis zum gleitenden Fortschritt die echten Messpunkte, dazu der gleitende Punkt als Spitze.
+  // Real samples up to the gliding progress, plus the gliding point as the tip.
   let samples = key === "download" ? s.dl : key === "upload" ? s.ul : [];
   if (live) samples = [...samples.filter(([p]) => p <= shown.p), [shown.p, shown.v]];
   const cx = x + 200;
@@ -241,16 +240,16 @@ export function renderSvg(s: State, shown: Shown = target(s)) {
 export function caption(s: State) {
   if (s.error) return s.error;
   const info = s.result || s.start;
-  if (!info) return "Suche den besten Server …";
+  if (!info) return "Finding the best server …";
   const { server, isp } = info;
-  const vpn = info.interface?.isVpn ? "über VPN" : null;
+  const vpn = info.interface?.isVpn ? "via VPN" : null;
   return [server.name, `${server.location}, ${server.country}`, isp, vpn].filter(Boolean).join(" · ");
 }
 
 export function summary(result: Result) {
   return [
-    `Download ${speed(mbps(result.download.bandwidth))} Mbit/s`,
-    `Upload ${speed(mbps(result.upload.bandwidth))} Mbit/s`,
+    `Download ${speed(mbps(result.download.bandwidth))} Mbps`,
+    `Upload ${speed(mbps(result.upload.bandwidth))} Mbps`,
     `Ping ${ms(result.ping.latency)} ms`,
     `${result.server.name} (${result.server.location})`,
     result.result?.url,

@@ -1,5 +1,5 @@
-// npm test [-- ordner]: prüft Parsen und Gleiten an einem echten CLI-Lauf und schreibt
-// optional die SVG-Zwischenstände in [ordner], um sie anzusehen.
+// npm test [-- dir]: checks parsing and gliding against a recorded CLI run and optionally
+// writes the SVG states to [dir] for a visual check.
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -15,23 +15,23 @@ const states = {
   download: at(40),
   upload: at(firstUpload + 60),
   done: parse(lines.join("\n") + "\n", 0),
-  error: parse('{"type":"log","level":"error","message":"Keine Server erreichbar"}', 1),
+  error: parse('{"type":"log","level":"error","message":"No servers available"}', 1),
 };
 assert.deepEqual(
   Object.fromEntries(Object.entries(states).map(([k, s]) => [k, s.phase])),
   { connecting: "connecting", ping: "ping", download: "download", upload: "upload", done: "done", error: "connecting" },
 );
-assert.equal(states.error.error, "Keine Server erreichbar");
+assert.equal(states.error.error, "No servers available");
 assert.equal(states.done.error, null);
 assert.match(states.done.result?.result?.url ?? "", /^https:\/\/www\.speedtest\.net\/result\//);
 assert.ok(states.download.dl.length > 10 && states.upload.ul.length > 10);
-// Eine halb geschriebene letzte Zeile ist während des Laufs kein Fehler, nach Prozessende schon.
+// A half-written last line is no error while running, but it is once the process has exited.
 assert.equal(parse(lines.slice(0, 40).join("\n") + '\n{"type":"downl').error, null);
-assert.equal(parse("Unbekannte Option", 2).error, "Unbekannte Option");
-assert.equal(parse("", 1).error, "speedtest endete mit Code 1");
+assert.equal(parse("Unknown option", 2).error, "Unknown option");
+assert.equal(parse("", 1).error, "speedtest exited with code 1");
 
-// Gleiten: Phasenwechsel übernimmt den Fortschritt sofort, der Wert gleitet, rastet ein und
-// liefert dann dasselbe Objekt, damit React nicht neu rendert.
+// Gliding: a phase change takes the progress at once, the value glides, settles and then
+// returns the same object so React skips the render.
 const goal = target(states.upload);
 let shown = step(target(states.download), goal);
 assert.equal(shown.phase, "upload");

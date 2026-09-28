@@ -2,7 +2,7 @@
   "$schema": "https://www.raycast.com/schemas/extension.json",
   "name": "speedtest-live",
   "title": "Speedtest Live",
-  "description": "Misst Ping, Download und Upload über speedtest.net und zeigt jeden Messwert live mit Tacho und Verlaufskurven.",
+  "description": "Measures ping, download and upload via speedtest.net and shows every sample live with a gauge and history curves.",
   "icon": "icon.png",
   "author": "llabusch93",
   "license": "MIT",
@@ -12,7 +12,7 @@
     {
       "name": "speedtest",
       "title": "Speedtest",
-      "description": "Internetgeschwindigkeit live messen",
+      "description": "Measure your internet speed live",
       "mode": "view"
     }
   ],
