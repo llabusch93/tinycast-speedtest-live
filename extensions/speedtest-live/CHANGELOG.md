@@ -5,3 +5,4 @@
 - Live-Dashboard mit Tacho und Kacheln für Ping, Download und Upload
 - Verlaufskurven, die mit dem Fortschritt wachsen
 - Flüssige Anzeige ohne Flackern in Tinycast 0.11
+- Lädt die Ookla-CLI bei Bedarf selbst, geprüft gegen eine feste Prüfsumme

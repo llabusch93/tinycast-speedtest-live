@@ -36,13 +36,11 @@ jedem neuen Messpunkt, statt zu springen.
 ## Voraussetzungen
 
 - [Tinycast](https://github.com/abue-ammar/tinycast), getestet mit 0.11.3
-- Ookla Speedtest CLI:
-
-  ```bash
-  brew install teamookla/speedtest/speedtest
-  ```
-
-- Für die Installation aus diesem Repository: Node.js und ein Paketmanager (pnpm, Bun, Yarn oder npm).
+- Die Ookla Speedtest CLI bringt die Erweiterung selbst mit: Ist sie über Homebrew installiert
+  (`brew install teamookla/speedtest/speedtest`), wird diese genutzt. Sonst lädt die Erweiterung beim
+  ersten Start die Ookla-CLI 1.2.0 von `install.speedtest.net` und prüft sie gegen eine feste
+  SHA256-Prüfsumme.
+- Nur für die Installation über eine Registry: Node.js und ein Paketmanager (pnpm, Bun, Yarn oder npm).
   Tinycast baut die Erweiterung dabei aus dem Quellcode.
 
 ## Installation
@@ -53,7 +51,13 @@ jedem neuen Messpunkt, statt zu springen.
 2. Unter **Registries** das Repository `llabusch93/tinycast-speedtest-live` hinzufügen.
 3. Unter **Search Registries** nach „speedtest“ suchen und **Speedtest Live** installieren.
 
-### Aus einem lokalen Ordner
+### Fertiges Release
+
+`speedtest-live.zip` aus den [Releases](https://github.com/llabusch93/tinycast-speedtest-live/releases)
+laden und entpacken. Danach in Tinycast **Einstellungen → Extensions → Install → Add from folder**
+wählen und den entpackten Ordner `speedtest-live` angeben. Node.js ist dafür nicht nötig.
+
+### Aus dem Quellcode
 
 ```bash
 git clone https://github.com/llabusch93/tinycast-speedtest-live.git
@@ -78,7 +82,7 @@ Im Launcher **Speedtest** aufrufen; die Messung startet sofort.
 
 ## So funktioniert es
 
-- Die CLI läuft mit `--format=jsonl --progress=yes` und schreibt etwa neun Messpunkte pro Sekunde
+- Die Ookla-CLI läuft mit `--format=jsonl --progress=yes` und schreibt etwa neun Messpunkte pro Sekunde
   in eine Datei im Support-Ordner der Erweiterung. Nach dem Lauf wird die Datei gelöscht.
 - Das Dashboard ist ein SVG in einer einzelnen Grid-Kachel. Anders als ein Bild im Markdown behält eine
   Grid-Kachel in Tinycast ihr letztes Bild, bis das nächste fertig ist. So blinkt nichts beim Wechsel.
