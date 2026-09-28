@@ -27,6 +27,10 @@ export default function Command() {
   useEffect(() => {
     if (!cli) return;
     fs.mkdirSync(environment.supportPath, { recursive: true });
+    // Schließt Tinycast die Palette mitten im Lauf, entfällt das Aufräumen unten; Reste gehen hier.
+    for (const name of fs.readdirSync(environment.supportPath)) {
+      if (name.startsWith("run-")) fs.rmSync(path.join(environment.supportPath, name), { force: true });
+    }
     // Eigene Datei je Lauf: Ein abgebrochener Vorgänger schreibt sonst in die neue hinein.
     const file = path.join(environment.supportPath, `run-${Date.now()}.jsonl`);
     fs.writeFileSync(file, "");
